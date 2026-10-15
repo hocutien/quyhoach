@@ -183,7 +183,7 @@ function sach_(s) { return String(s).replace(/[\\\/:*?"<>|\r\n]+/g, ' ').replace
 function goiGemini_(file, projects) {
   const key = prop_('GEMINI_KEY');
   if (!key) throw new Error('Chưa có GEMINI_KEY');
-  const model = prop_('GEMINI_MODEL') || 'gemini-2.5-flash';
+  let model = prop_('GEMINI_MODEL') || 'gemini-3.8-flash';
   const mime = file.getMimeType();
   let part;
   if (mime === 'application/pdf' || /^image\//.test(mime)) {
@@ -215,10 +215,24 @@ function goiGemini_(file, projects) {
     generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
   };
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key;
-  const r = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true });
+  let r = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true });
+  if (r.getResponseCode() === 404) { // model cũ bị ngừng: tự chọn bản Flash mới nhất rồi thử lại
+    model = chonModel_(key);
+    PropertiesService.getScriptProperties().setProperty('GEMINI_MODEL', model);
+    r = UrlFetchApp.fetch(url.replace(/models\/[^:]+:/, 'models/' + model + ':'), { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true });
+  }
   if (r.getResponseCode() !== 200) throw new Error('Gemini lỗi ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 300));
   const txt = (((JSON.parse(r.getContentText()).candidates || [])[0] || {}).content || { parts: [{ text: '{}' }] }).parts.map(p => p.text || '').join('');
   try { return JSON.parse(txt.replace(/^```json\s*|```\s*$/g, '')); } catch (x) { throw new Error('Gemini trả kết quả không đọc được'); }
+}
+
+function chonModel_(key) {
+  const j = JSON.parse(UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + key).getContentText());
+  const ok = (j.models || []).filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0)
+    .map(m => m.name.replace('models/', '')).filter(n => /^gemini-[\d.]+-flash$/.test(n));
+  ok.sort((a, b) => parseFloat(b.split('-')[1]) - parseFloat(a.split('-')[1]));
+  if (!ok.length) throw new Error('Không tìm thấy model Gemini Flash dùng được');
+  return ok[0];
 }
 
 function taiLenGemini_(blob, key) {

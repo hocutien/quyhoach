@@ -82,7 +82,9 @@ td.dt{white-space:nowrap}
 .jobs{display:grid;gap:6px}
 .job{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.84rem;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .prog{height:4px;background:var(--line);border-radius:2px;overflow:hidden;grid-column:1/-1}.prog i{display:block;height:100%;background:var(--accent);width:0}
-.st{font-size:.78rem;color:var(--muted)}.st.ok{color:var(--ok)}.st.bad{color:var(--bad)}
+.st{font-size:.78rem;color:var(--muted)}
+.job .st{grid-column:1/-1;word-break:break-word}
+.job>span:first-child{word-break:break-word}.st.ok{color:var(--ok)}.st.bad{color:var(--bad)}
 .queue{display:grid;gap:10px}
 .card .top{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:space-between}
 .card .goc{font-size:.8rem;color:var(--muted);word-break:break-word}
