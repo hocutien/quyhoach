@@ -95,6 +95,7 @@ td.dt{white-space:nowrap}
 .cbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 10px;margin-top:6px;font-size:.82rem;max-height:220px;overflow:auto}
 .cbs label{all:unset;display:flex;gap:6px;align-items:baseline;cursor:pointer}
 .sum{font-size:.84rem;margin-top:6px}
+.moi{display:inline-block;background:var(--hl);color:#1d2420;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:1px 6px}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);max-width:min(480px,92vw);padding:18px 20px}
 dialog::backdrop{background:rgb(0 0 0 / .35)}
 dialog label{display:block;font-size:.8rem;color:var(--muted);margin:10px 0 3px}
@@ -418,7 +419,7 @@ function drawQueue(){
     const ai=r.ai||{}, chosen=new Set(String(r.banSao||"").split(/[,;\s]+/).filter(Boolean));
     const proj=ai.chinh&&byId[ai.chinh]?byId[ai.chinh].label:"";
     return `<div class="card" data-row="${r.row}">
-      <div class="top"><b>${proj?esc(proj):"Chưa xác định dự án"}</b><span class="hint">Dòng ${r.row} · ${esc(r.nguon||"")} · ${esc(r.ngay||"")}</span></div>
+      <div class="top">${proj?`<b>${esc(proj)}</b>`:ai.moi?`<span><span class="moi">Dự án mới</span> <b>${esc(ai.moi.ten)}</b> <span class="hint">· nhóm ${esc(ai.moi.group)} · tạo thư mục khi duyệt</span></span>`:"<b>Chưa xác định dự án</b>"}<span class="hint">Dòng ${r.row} · ${esc(r.nguon||"")} · ${esc(r.ngay||"")}</span></div>
       <div class="goc">Tên gốc: ${esc(ai.goc||"")} ${r.url?`· <a href="${r.url}" target="_blank" rel="noopener">Xem file</a>`:""}</div>
       ${r.ghiChu?`<div class="sum">${esc(r.ghiChu)}</div>`:""}
       <label for="n${r.row}">Tên file (STT tự đánh khi duyệt)</label><input type="text" id="n${r.row}" value="${esc(r.ten)}">
@@ -433,7 +434,7 @@ function drawQueue(){
     c.querySelector('[data-act="duyet"]').onclick=async()=>{
       busy(true,"Đang xếp vào thư mục, đánh STT…");
       const banSao=[...c.querySelectorAll(".cbs input:checked")].map(i=>i.value).join(", ");
-      try{const j=await api("duyet",{row,ten:$("n"+row).value,thuMuc:$("f"+row).value,banSao});toast("Đã xếp: "+j.ket.ten,4000);await load()}
+      try{const j=await api("duyet",{row,ten:$("n"+row).value,thuMuc:$("f"+row).value,banSao});toast((j.ket.duAnMoi?"Đã tạo dự án mới và xếp: ":"Đã xếp: ")+j.ket.ten,4500);await load()}
       catch(e){busy(false,e.message);st.className="st bad"}};
     c.querySelector('[data-act="ai"]').onclick=async()=>{
       busy(true,"Gemini đang đọc…");

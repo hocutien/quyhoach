@@ -322,8 +322,9 @@ function phanLoai_(fileId, row, nguon) {
   const file = DriveApp.getFileById(fileId);
   const payload = buildPayload_();
   const projects = payload.nodes.map(n => n.id + ' | ' + n.label + ' | ' + n.path).join('\n');
+  const capCha = thuMucCha_(payload.nodes);
   let ai, loiAI = '';
-  try { ai = goiGemini_(file, projects); } catch (x) { ai = {}; loiAI = String(x.message || x).slice(0, 200); }
+  try { ai = goiGemini_(file, projects, capCha); } catch (x) { ai = {}; loiAI = String(x.message || x).slice(0, 200); }
   const byId = {}; payload.nodes.forEach(n => byId[n.id] = n);
   const chinh = byId[ai.du_an_chinh] ? ai.du_an_chinh : '';
   const lienQuan = (ai.du_an_lien_quan || []).filter(id => byId[id] && id !== chinh);
@@ -334,12 +335,16 @@ function phanLoai_(fileId, row, nguon) {
   const ten = loiAI ? file.getName() : sach_((ngay || 'xx.xx.' + new Date().getFullYear()) + ' [' + nhan + '] ' + (ai.co_quan || 'Chưa rõ cơ quan') + ' - ' +
     [ai.so_hieu, ai.trich_yeu].filter(Boolean).join(' ')) + ext;
   const nam = ngay ? ngay.slice(6) : String(new Date().getFullYear());
-  const thuMuc = chinh ? byId[chinh].path + '/' + nam : '_KHAC';
-  const ghiChu = loiAI ? 'Gemini chưa đọc được (' + loiAI.replace(/\s+/g, ' ').slice(0, 120) + ') – bấm "Phân loại lại"' : (ai.tom_tat || '') + (ai.ly_do ? ' — ' + ai.ly_do : '');
+  let thuMuc = chinh ? byId[chinh].path + '/' + nam : '_KHAC', moi = null;
+  if (!chinh && !loiAI && ai.du_an_moi && ai.du_an_moi.ten) {
+    moi = deXuatDuAnMoi_(ai.du_an_moi, capCha, payload.nodes, byId);
+    thuMuc = moi.path + '/' + nam;
+  }
+  const ghiChu = (moi ? '[DỰ ÁN MỚI: ' + moi.ten + '] ' : '') + (loiAI ? 'Gemini chưa đọc được (' + loiAI.replace(/\s+/g, ' ').slice(0, 120) + ') – bấm "Phân loại lại"' : (ai.tom_tat || '') + (ai.ly_do ? ' — ' + ai.ly_do : ''));
 
   const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_QUEUE);
   const today = Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd.MM.yyyy');
-  const aiJson = JSON.stringify({ chinh, lienQuan, ngay, nhan, co_quan: ai.co_quan || '', so_hieu: ai.so_hieu || '', trich_yeu: ai.trich_yeu || '', tom_tat: ai.tom_tat || '', goc: file.getName() });
+  const aiJson = JSON.stringify({ chinh, lienQuan, ngay, nhan, co_quan: ai.co_quan || '', so_hieu: ai.so_hieu || '', trich_yeu: ai.trich_yeu || '', tom_tat: ai.tom_tat || '', goc: file.getName(), moi });
   if (row) {
     sh.getRange(row, 2, 1, 2).setValues([[ten, thuMuc]]);
     sh.getRange(row, 8).setValue(ghiChu);
@@ -355,7 +360,7 @@ function phanLoai_(fileId, row, nguon) {
 
 function sach_(s) { return String(s).replace(/[\\\/:*?"<>|\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180); }
 
-function goiGemini_(file, projects) {
+function goiGemini_(file, projects, capCha) {
   const key = prop_('GEMINI_KEY');
   if (!key) throw new Error('Chưa có GEMINI_KEY');
   let model = prop_('GEMINI_MODEL') || 'gemini-3.8-flash';
@@ -380,10 +385,12 @@ function goiGemini_(file, projects) {
     '- du_thao: true nếu là dự thảo/chưa ký/chưa đóng dấu',
     '- du_an_chinh: MÃ dự án phù hợp nhất trong danh sách dưới ("" nếu không có dự án nào phù hợp)',
     '- du_an_lien_quan: mảng MÃ các dự án khác được văn bản nhắc tới cụ thể (không gồm du_an_chinh)',
+    '- du_an_moi: CHỈ khi du_an_chinh = "" mà văn bản nói về một dự án/quy hoạch cụ thể chưa có trong danh sách: {"ten": tên dự án ngắn gọn, chuẩn (vd "Cầu Long Toàn 2", "QH phân khu Khu cảng Long Toàn"), "thu_muc_cha": một đường dẫn trong DANH SÁCH THƯ MỤC CHA, "du_an_cha": MÃ dự án mà dự án mới cụ thể hóa hoặc nằm trong (có thể "")}; ngược lại để null',
     '- tom_tat: 1–2 câu nội dung chính',
     '- ly_do: vì sao chọn dự án đó (ngắn)',
     'Quy tắc nhãn: quyết định phê duyệt quy hoạch → "QĐ-QH"; quyết định/nghị quyết pháp lý khác → "Pháp lý"; tờ trình, đề xuất chủ trương → "Chủ trương - Tờ trình"; báo cáo tiến độ → "Tiến độ"; bồi thường, giải phóng mặt bằng → "GPMB"; xin ý kiến, giấy mời phối hợp → "Phối hợp"; thuyết minh, bản vẽ, hồ sơ thiết kế → "Hồ sơ KT"; lấy ý kiến, công bố quy hoạch → "Lập - Công bố QH".',
-    'DANH SÁCH DỰ ÁN (mã | tên | thư mục):', projects
+    'DANH SÁCH DỰ ÁN (mã | tên | thư mục):', projects,
+    'DANH SÁCH THƯ MỤC CHA (nơi có thể tạo thư mục dự án mới):', (capCha || []).join('\n')
   ].join('\n');
   const body = {
     contents: [{ role: 'user', parts: [part, { text: prompt }] }],
@@ -403,6 +410,50 @@ function goiGemini_(file, projects) {
   if (r.getResponseCode() !== 200) throw new Error('Gemini lỗi ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 300));
   const txt = (((JSON.parse(r.getContentText()).candidates || [])[0] || {}).content || { parts: [{ text: '{}' }] }).parts.map(p => p.text || '').join('');
   try { return JSON.parse(txt.replace(/^```json\s*|```\s*$/g, '')); } catch (x) { throw new Error('Gemini trả kết quả không đọc được'); }
+}
+
+/** Các thư mục chứa dự án (cấp 1 và nhóm con), nơi có thể tạo dự án mới. */
+function thuMucCha_(nodes) {
+  const set = {};
+  ['1. QUỐC GIA - NGÀNH', '2. TỈNH', '3. KKT ĐỊNH AN', '4. ĐÔ THỊ NGOÀI KKT', '5. SỬ DỤNG ĐẤT (QHSDĐ - KHSDĐ)', '6. QH CHUNG XÃ (sau sáp nhập 2025)'].forEach(p => set[p] = 1);
+  nodes.forEach(n => { const s = n.path.split('/'); for (let i = 1; i < s.length; i++) set[s.slice(0, i).join('/')] = 1; });
+  nodes.forEach(n => delete set[n.path]);
+  return Object.keys(set).sort();
+}
+
+/** Đặt tên thư mục dự án mới; nếu thư mục anh em đang đánh số thì lấy số tiếp theo. */
+function deXuatDuAnMoi_(dm, capCha, nodes, byId) {
+  let cha = String(dm.thu_muc_cha || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  if (capCha.indexOf(cha) < 0) cha = (byId[dm.du_an_cha] && byId[dm.du_an_cha].path.split('/').slice(0, -1).join('/')) || '2. TỈNH';
+  const ten = sach_(dm.ten).slice(0, 90);
+  let anhEm = [];
+  const tree = readCache_();
+  if (tree) {
+    let node = tree;
+    cha.split('/').forEach(s => { node = node && (node.children || []).find(c => c.type === 'folder' && c.name === s); });
+    if (node) anhEm = (node.children || []).filter(c => c.type === 'folder').map(c => c.name);
+  }
+  const so = anhEm.map(n => (n.match(/^(\d+)\.\s/) || [])[1]).filter(Boolean).map(Number);
+  const tenTM = so.length && so.length >= anhEm.length / 2 ? (Math.max.apply(null, so) + 1) + '. ' + ten : ten;
+  // nhóm sơ đồ: theo dự án anh em, không có thì theo cấp 1
+  const anh = nodes.find(n => n.path.split('/').slice(0, -1).join('/') === cha);
+  const capMap = { '1': 'Quốc gia – ngành', '2': 'Tỉnh – dự án', '3': 'KKT Định An', '4': 'Đô thị ngoài KKT', '5': 'Sử dụng đất', '6': 'QH chung xã' };
+  const group = anh ? anh.group : (capMap[cha.charAt(0)] || 'Chưa xếp');
+  return { ten, path: cha + '/' + tenTM, group, cha: byId[dm.du_an_cha] ? dm.du_an_cha : '' };
+}
+
+/** Khi duyệt văn bản của dự án mới: thêm dự án vào SD_DUAN (đúng nhóm, cạnh dự án cùng nhóm) và quan hệ cụ thể hóa. */
+function themDuAnMoi_(moi, duongDanDuAn) {
+  const ss = SpreadsheetApp.openById(SHEET_ID), sh = ss.getSheetByName(TAB_DUAN);
+  const v = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 7).getValues() : [];
+  if (v.some(r => String(r[3]).replace(/\\/g, '/') === duongDanDuAn)) return '';
+  const cung = v.filter(r => r[2] === moi.group && r[4] !== '' && r[5] !== '');
+  const x = cung.length ? Number(cung[cung.length - 1][4]) : 0;
+  const y = cung.length ? Math.max.apply(null, cung.map(r => Number(r[5]))) + 100 : 0;
+  const id = 'da_' + Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'yyMMddHHmmss');
+  sh.appendRow([id, moi.ten, moi.group, duongDanDuAn, cung.length ? x : '', cung.length ? y : '', false]);
+  if (moi.cha) ss.getSheetByName(TAB_QUANHE).appendRow([moi.cha, id, 'Cụ thể hóa', 'Tự thêm khi duyệt']);
+  return id;
 }
 
 function chonModel_(key) {
@@ -461,6 +512,14 @@ function duyet_(req) {
     ((String(req.ten || r[1]).match(/\.[A-Za-z0-9]{2,5}$/) || [''])[0]);
   const thuMuc = String(req.thuMuc || r[2]).replace(/\\/g, '/').replace(/^QUY HOACH\//, '').replace(/\/+$/, '');
   const dich = getPath_(thuMuc, true);
+  let moiId = '';
+  try {
+    const aiCu = JSON.parse(String(r[11] || '{}'));
+    if (aiCu.moi) {
+      const duongDanDuAn = thuMuc.split('/').filter(x => !/^\d{4}$/.test(x)).join('/');
+      if (duongDanDuAn !== '_KHAC') moiId = themDuAnMoi_(Object.assign({}, aiCu.moi, { ten: duongDanDuAn.split('/').pop().replace(/^\d+\.\s*/, '') }), duongDanDuAn);
+    }
+  } catch (x) {}
   const file = DriveApp.getFileById(fileId);
   file.moveTo(dich);
   file.setName(ten);
@@ -488,7 +547,7 @@ function duyet_(req) {
   sh.getRange(req.row, 6, 1, 2).setValues([['Đã xếp', true]]);
   sh.getRange(req.row, 11).setValue(ids.join(', '));
   vaCache_(doiCho);
-  return { ten: file.getName(), thuMuc, banSao: ids };
+  return { ten: file.getName(), thuMuc, banSao: ids, duAnMoi: moiId };
 }
 
 /** Đánh lại STT các file có ngày trong một thư mục, theo ngày ban hành. */
