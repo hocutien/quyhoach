@@ -197,8 +197,13 @@ function doPost(e) {
     const needLock = ['duyet', 'bo', 'phanloai', 'quet', 'vitri', 'quanhe'].indexOf(req.a) >= 0;
     if (needLock) lock.waitLock(60000);
     switch (req.a) {
-      case 'datgemini': if (!/^AIza[\w-]{20,}$/.test(String(req.gemini || '').trim())) throw new Error('API key Gemini không hợp lệ');
-        PropertiesService.getScriptProperties().setProperty('GEMINI_KEY', String(req.gemini).trim()); return json_({ ok: true });
+      case 'datgemini': {
+        const g = String(req.gemini || '').replace(/["'\s]/g, '');
+        if (g.length < 20) throw new Error('API key Gemini quá ngắn – kiểm tra lại đã chép đủ chưa');
+        const t = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1&key=' + encodeURIComponent(g), { muteHttpExceptions: true });
+        if (t.getResponseCode() !== 200) throw new Error('Google từ chối key (' + t.getResponseCode() + '): ' + ((JSON.parse(t.getContentText() || '{}').error || {}).message || '').slice(0, 160));
+        PropertiesService.getScriptProperties().setProperty('GEMINI_KEY', g); return json_({ ok: true });
+      }
       case 'tai': return json_({ ok: true, data: taiDuLieu_() });
       case 'token': return json_({ ok: true, token: ScriptApp.getOAuthToken(), folderId: getPath_(INBOX_PATH, true).getId() });
       case 'phanloai': return json_({ ok: true, row: phanLoai_(req.fileId, req.row, req.nguon) });
