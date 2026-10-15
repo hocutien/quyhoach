@@ -322,7 +322,8 @@ function phanLoai_(fileId, row, nguon) {
   const file = DriveApp.getFileById(fileId);
   const payload = buildPayload_();
   const projects = payload.nodes.map(n => n.id + ' | ' + n.label + ' | ' + n.path).join('\n');
-  const ai = goiGemini_(file, projects);
+  let ai, loiAI = '';
+  try { ai = goiGemini_(file, projects); } catch (x) { ai = {}; loiAI = String(x.message || x).slice(0, 200); }
   const byId = {}; payload.nodes.forEach(n => byId[n.id] = n);
   const chinh = byId[ai.du_an_chinh] ? ai.du_an_chinh : '';
   const lienQuan = (ai.du_an_lien_quan || []).filter(id => byId[id] && id !== chinh);
@@ -330,11 +331,11 @@ function phanLoai_(fileId, row, nguon) {
   if (ai.du_thao && nhan !== 'Tham khảo - Dự thảo' && !/QĐ-QH/.test(nhan)) nhan = 'Tham khảo - Dự thảo';
   const ngay = /^\d{2}\.\d{2}\.\d{4}$/.test(ai.ngay || '') ? ai.ngay : '';
   const ext = (file.getName().match(/\.[A-Za-z0-9]{2,5}$/) || [''])[0].toLowerCase();
-  const ten = sach_((ngay || 'xx.xx.' + new Date().getFullYear()) + ' [' + nhan + '] ' + (ai.co_quan || 'Chưa rõ cơ quan') + ' - ' +
+  const ten = loiAI ? file.getName() : sach_((ngay || 'xx.xx.' + new Date().getFullYear()) + ' [' + nhan + '] ' + (ai.co_quan || 'Chưa rõ cơ quan') + ' - ' +
     [ai.so_hieu, ai.trich_yeu].filter(Boolean).join(' ')) + ext;
   const nam = ngay ? ngay.slice(6) : String(new Date().getFullYear());
   const thuMuc = chinh ? byId[chinh].path + '/' + nam : '_KHAC';
-  const ghiChu = (ai.tom_tat || '') + (ai.ly_do ? ' — ' + ai.ly_do : '');
+  const ghiChu = loiAI ? 'Gemini chưa đọc được (' + loiAI.replace(/\s+/g, ' ').slice(0, 120) + ') – bấm "Phân loại lại"' : (ai.tom_tat || '') + (ai.ly_do ? ' — ' + ai.ly_do : '');
 
   const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB_QUEUE);
   const today = Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd.MM.yyyy');
@@ -393,6 +394,10 @@ function goiGemini_(file, projects) {
   if (r.getResponseCode() === 404) { // model cũ bị ngừng: tự chọn bản Flash mới nhất rồi thử lại
     model = chonModel_(key);
     PropertiesService.getScriptProperties().setProperty('GEMINI_MODEL', model);
+    r = UrlFetchApp.fetch(url.replace(/models\/[^:]+:/, 'models/' + model + ':'), { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true });
+  }
+  for (let i = 0; i < 3 && (r.getResponseCode() === 503 || r.getResponseCode() === 429); i++) { // quá tải: chờ rồi thử lại
+    Utilities.sleep(6000 * (i + 1));
     r = UrlFetchApp.fetch(url.replace(/models\/[^:]+:/, 'models/' + model + ':'), { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true });
   }
   if (r.getResponseCode() !== 200) throw new Error('Gemini lỗi ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 300));
