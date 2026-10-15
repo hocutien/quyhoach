@@ -508,7 +508,7 @@ function duyet_(req) {
   const r = sh.getRange(req.row, 1, 1, 12).getValues()[0];
   if (String(r[5]).trim() !== 'Chờ duyệt') throw new Error('Dòng ' + req.row + ' không còn ở trạng thái Chờ duyệt');
   const fileId = String(r[8]);
-  const ten = sach_(String(req.ten || r[1]).replace(/^\d+\.\s*/, '').replace(/\.[A-Za-z0-9]{2,5}$/, '')) +
+  const ten = sach_(String(req.ten || r[1]).replace(/^\d+\.\s+(?=(?:\d{2}|xx)\.\d{2}\.\d{4})/, '').replace(/\.[A-Za-z0-9]{2,5}$/, '')) +
     ((String(req.ten || r[1]).match(/\.[A-Za-z0-9]{2,5}$/) || [''])[0]);
   const thuMuc = String(req.thuMuc || r[2]).replace(/\\/g, '/').replace(/^QUY HOACH\//, '').replace(/\/+$/, '');
   const dich = getPath_(thuMuc, true);
