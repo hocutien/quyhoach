@@ -28,7 +28,6 @@ function doGet(e) {
 
 /** Chạy tay 1 lần: tạo tab cấu hình, quét Drive lần đầu, đặt lịch quét mỗi giờ. */
 function caiDat() {
-  ['MA_KHOA', 'GEMINI_KEY'].forEach(k => { if (!prop_(k)) throw new Error('Chưa khai báo Thuộc tính tập lệnh ' + k + ' (Cài đặt dự án › Thuộc tính tập lệnh).'); });
   quetToanBo();
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'quetToanBo').forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('quetToanBo').timeBased().everyHours(1).create();

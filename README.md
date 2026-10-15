@@ -12,7 +12,7 @@ Dữ liệu không nằm trong repo: trang gọi Web App Apps Script (thư mục
 
 1. script.google.com → mở dự án **So do quan he QH** (hoặc tạo mới).
 2. Dán 3 file trong `apps-script/`: `Code.gs`, `Api.gs` (tạo tệp kịch bản mới tên `Api`), `SoDo.html` (tệp HTML tên `SoDo`).
-3. ⚙ **Cài đặt dự án** → **Thuộc tính tập lệnh** → thêm:
+3. (Có thể bỏ qua) Mã khóa mặc định nằm trong code; API key Gemini nhập ở hộp Cài đặt của trang.
    - `MA_KHOA`: mã khóa tự đặt (dài, khó đoán)
    - `GEMINI_KEY`: API key Gemini (aistudio.google.com)
    - (tùy chọn) `GEMINI_MODEL`, mặc định `gemini-2.5-flash`

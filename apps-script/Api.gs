@@ -10,7 +10,8 @@ const TAB_QUEUE = 'HÀNG CHỜ';
 const NHAN = ['QĐ-QH', 'Pháp lý', 'Chủ trương - Tờ trình', 'Chỉ đạo', 'Đôn đốc', 'Phối hợp', 'Tiến độ', 'GPMB',
   'Lập - Công bố QH', 'Hồ sơ KT', 'Tham khảo - Dự thảo', 'Văn bản chung - Bản sao'];
 
-function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k) || ''; }
+const MA_KHOA_MAC_DINH = '__MAKHOA__';
+function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k) || (k === 'MA_KHOA' ? MA_KHOA_MAC_DINH : ''); }
 function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 function doPost(e) {
@@ -22,6 +23,8 @@ function doPost(e) {
     const needLock = ['duyet', 'bo', 'phanloai', 'quet', 'vitri', 'quanhe'].indexOf(req.a) >= 0;
     if (needLock) lock.waitLock(60000);
     switch (req.a) {
+      case 'datgemini': if (!/^AIza[\w-]{20,}$/.test(String(req.gemini || '').trim())) throw new Error('API key Gemini không hợp lệ');
+        PropertiesService.getScriptProperties().setProperty('GEMINI_KEY', String(req.gemini).trim()); return json_({ ok: true });
       case 'tai': return json_({ ok: true, data: taiDuLieu_() });
       case 'token': return json_({ ok: true, token: ScriptApp.getOAuthToken(), folderId: getPath_(INBOX_PATH, true).getId() });
       case 'phanloai': return json_({ ok: true, row: phanLoai_(req.fileId, req.row, req.nguon) });

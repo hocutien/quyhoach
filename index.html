@@ -167,6 +167,7 @@ dialog input{width:100%}
     <p class="hint" style="margin:0">Dán địa chỉ Web App (kết thúc bằng <code>/exec</code>) và mã khóa anh đã đặt trong Apps Script. Lưu trên máy này, mỗi máy nhập một lần.</p>
     <label for="c-url">Địa chỉ Web App</label><input id="c-url" type="url" required placeholder="https://script.google.com/macros/s/…/exec">
     <label for="c-key">Mã khóa</label><input id="c-key" type="password" required>
+    <label for="c-gem">API key Gemini (chỉ cần nhập 1 lần, lưu vào Apps Script, không lưu trên máy này)</label><input id="c-gem" type="password" placeholder="AIza…" autocomplete="off">
     <div class="bar" style="margin-top:14px;justify-content:flex-end"><button class="btn" value="cancel" formnovalidate>Đóng</button><button class="btn pri" id="c-save" value="ok">Lưu và tải</button></div>
   </form>
 </dialog>
@@ -189,7 +190,9 @@ function openCfg(){ $("c-url").value=CFG.url; $("c-key").value=CFG.key; $("dlg")
 $("b-cfg").onclick=openCfg;
 $("cfgform").addEventListener("submit",e=>{
   if(e.submitter&&e.submitter.value!=="ok") return;
-  CFG={url:$("c-url").value.trim(),key:$("c-key").value.trim()}; LS.set("qh_url",CFG.url); LS.set("qh_key",CFG.key); load();
+  CFG={url:$("c-url").value.trim(),key:$("c-key").value.trim()}; LS.set("qh_url",CFG.url); LS.set("qh_key",CFG.key);
+  const gem=$("c-gem").value.trim(); $("c-gem").value="";
+  (gem?api("datgemini",{gemini:gem}).then(()=>toast("Đã lưu API key Gemini")).catch(e=>toast(e.message,5000)):Promise.resolve()).then(load);
 });
 
 /* ---------- Thẻ ---------- */
