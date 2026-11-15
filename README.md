@@ -4,7 +4,6 @@ Trang theo dõi kho văn bản quy hoạch trên Google Drive (`QUY HOACH`):
 
 - **Sơ đồ**: quan hệ giữa các dự án, bấm ô để xem văn bản, kéo ô để đổi vị trí, thêm/xóa quan hệ.
 - **Mục lục**: toàn bộ văn bản, tìm theo tên, số hiệu, lọc theo nhóm và nhãn.
-- **Thửa đất nhà**: nhúng bản đồ thực địa thửa 320 tờ 51 và phương án cải tạo ([mở riêng](https://hocutien.github.io/nha-duyen-hai/map.html), [xem 3D](https://hocutien.github.io/nha-duyen-hai/)).
 - **Tải lên & duyệt**: kéo thả file → lên `_TIN MOI/Chờ duyệt` → Gemini đề xuất tên, thư mục, dự án liên quan → bấm **Duyệt** để đổi tên, đánh STT theo ngày ban hành, chuyển vào thư mục và chép bản sao.
 
 Dữ liệu không nằm trong repo: trang gọi Web App Apps Script (thư mục `apps-script/`) bằng mã khóa riêng.

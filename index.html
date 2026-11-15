@@ -125,7 +125,6 @@ dialog input{width:100%}
 <nav role="tablist">
   <button class="tab" role="tab" id="t-sodo" aria-selected="true">Sơ đồ</button>
   <button class="tab" role="tab" id="t-muc" aria-selected="false">Mục lục</button>
-  <button class="tab" role="tab" id="t-dat" aria-selected="false">Thửa đất nhà</button>
   <button class="tab" role="tab" id="t-tai" aria-selected="false">Tải lên &amp; duyệt <span class="badge" id="qcount" hidden>0</span></button>
 </nav>
 
@@ -152,15 +151,6 @@ dialog input{width:100%}
     <span class="hint" id="mcount"></span>
   </div>
   <div class="tbl-wrap"><table><thead><tr><th>Ngày</th><th>Nhãn</th><th>Văn bản</th><th>Dự án</th></tr></thead><tbody id="mbody"></tbody></table></div>
-</section>
-
-<section id="p-dat" hidden>
-  <div class="bar">
-    <span class="hint" style="flex:1 1 200px">Thửa 320 tờ 51 (đang ở) – phương án cải tạo chồng lên ảnh vệ tinh. Ra đất bấm 📍 trong bản đồ để xem mình đứng đâu.</span>
-    <a class="btn" href="https://hocutien.github.io/nha-duyen-hai/map.html" target="_blank" rel="noopener">Mở toàn màn hình</a>
-    <a class="btn" href="https://hocutien.github.io/nha-duyen-hai/" target="_blank" rel="noopener">Xem 3D</a>
-  </div>
-  <iframe id="datmap" title="Bản đồ thực địa thửa đất nhà Duyên Hải" data-src="https://hocutien.github.io/nha-duyen-hai/map.html" allow="geolocation" style="flex:1 1 auto;min-height:70vh;width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface)"></iframe>
 </section>
 
 <section id="p-tai" hidden>
@@ -209,8 +199,8 @@ $("cfgform").addEventListener("submit",e=>{
 });
 
 /* ---------- Thẻ ---------- */
-const TABS=["sodo","muc","dat","tai"];
-function showTab(n){TABS.forEach(t=>{$("t-"+t).setAttribute("aria-selected",t===n);$("p-"+t).hidden=t!==n});LS.set("qh_tab",n);if(n==="sodo"&&cy){cy.resize()}if(n==="dat"){const f=$("datmap");if(!f.src)f.src=f.dataset.src}}
+const TABS=["sodo","muc","tai"];
+function showTab(n){TABS.forEach(t=>{$("t-"+t).setAttribute("aria-selected",t===n);$("p-"+t).hidden=t!==n});LS.set("qh_tab",n);if(n==="sodo"&&cy){cy.resize()}}
 TABS.forEach(t=>$("t-"+t).onclick=()=>showTab(t));
 
 /* ---------- Dữ liệu ---------- */
